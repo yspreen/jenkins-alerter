@@ -1,14 +1,4 @@
 bkgJenkinsAlerter = {
-  init() {
-    this.sync(() => {
-      chrome.runtime.onMessage.addListener((r) => {
-        r.requestJenkinsAlerterStatus && this.sendOutStatus();
-      });
-      chrome.action.onClicked.addListener(() => this.actionListener());
-      this.sendOutStatus();
-      console.log("init");
-    });
-  },
   sync(func) {
     chrome.storage.sync.get(["enabled"], (d) => {
       this.enabled = d.enabled || false;
@@ -23,8 +13,10 @@ bkgJenkinsAlerter = {
       );
     });
   },
+  tabIds: [],
   enabled: true,
-  sendOutStatus() {
+  sendOutStatus(tabId) {
+    tabId && (this.tabIds.includes(tabId) || this.tabIds.push(tabId));
     this.sync(() => {
       chrome.action.setIcon({
         path: {
@@ -36,11 +28,19 @@ bkgJenkinsAlerter = {
         },
       });
       chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-        chrome.tabs.sendMessage(tabs[0].id, {
-          enableJenkinsAlerter: this.enabled,
+        this.tabIds.concat([tabs[0].id]).forEach((id) => {
+          chrome.tabs.sendMessage(id, {
+            enableJenkinsAlerter: this.enabled,
+          });
         });
       });
     });
   },
 };
-bkgJenkinsAlerter.init();
+
+chrome.runtime.onMessage.addListener((r, s) => {
+  r.requestJenkinsAlerterStatus && bkgJenkinsAlerter.sendOutStatus(s.tab.id);
+});
+chrome.action.onClicked.addListener(() => bkgJenkinsAlerter.actionListener());
+bkgJenkinsAlerter.sendOutStatus();
+console.log("init");
