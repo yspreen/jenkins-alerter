@@ -1,7 +1,7 @@
 bkgJenkinsAlerter = {
   sync(func) {
     chrome.storage.sync.get(["enabled"], (d) => {
-      this.enabled = d.enabled || false;
+      this.enabled = d.enabled !== false;
       func();
     });
   },
